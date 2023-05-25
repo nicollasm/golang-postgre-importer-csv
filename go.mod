@@ -1,4 +1,4 @@
-module https://github.com/nicollasm/golang-postgre-importer-csv
+module github.com/nicollasm/golang-postgre-importer-csv
 
 go 1.16
 
