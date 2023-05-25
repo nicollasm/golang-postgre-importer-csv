@@ -1,11 +1,11 @@
 package main
 
 import (
-	"log"
-
 	"github.com/nicollasm/golang-postgre-importer-csv/pkg"
 	"github.com/progrium/macdriver"
 	"github.com/progrium/macdriver/cocoa"
+	"github.com/progrium/macdriver/objc"
+	"log"
 )
 
 func main() {
