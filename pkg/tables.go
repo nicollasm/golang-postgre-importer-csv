@@ -36,7 +36,7 @@ func CreateTable(db *sql.DB, tableName string) error {
 	)`, tableName)
 	_, err := db.Exec(stmt)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	fmt.Println("Tabela criada com sucesso.")
@@ -47,7 +47,7 @@ func CreateTable(db *sql.DB, tableName string) error {
 func InsertDataFromCSV(db *sql.DB, tableName, filepath string) error {
 	f, err := os.Open(filepath)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	defer f.Close()
@@ -59,8 +59,12 @@ func InsertDataFromCSV(db *sql.DB, tableName, filepath string) error {
 			break
 		}
 		if err != nil {
-			log.Fatal(err)
+			log.Println(err)
 			return err
+		}
+		if len(record) < 21 {
+			log.Println("Registro com menos de 21 campos, ignorando...")
+			continue
 		}
 		insertData(db, tableName, record)
 	}
@@ -81,7 +85,7 @@ func insertData(db *sql.DB, tableName string, record []string) error {
 		record[7], record[8], record[9], record[10], record[11], record[12], record[13], record[14],
 		record[15], record[16], record[17], record[18], record[19], record[20])
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
 		return err
 	}
 	return nil

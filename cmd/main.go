@@ -1,59 +1,52 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"github.com/nicollasm/golang-postgre-importer-csv/pkg"
 	"log"
-	"os"
-	"strings"
+
+	"github.com/nicollasm/golang-postgre-importer-csv/pkg"
+	"github.com/progrium/macdriver"
+	"github.com/progrium/macdriver/cocoa"
 )
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
+	go func() {
+		macdriver.Main(func() {
+			config := pkg.DBConfig{}
 
-	fmt.Println("Insira o host do banco de dados:")
-	host, _ := reader.ReadString('\n')
+			config.Host = getUserInput("Insira o host do banco de dados:")
+			config.Port = getUserInput("Insira a porta do banco de dados:")
+			config.User = getUserInput("Insira o usuário do banco de dados:")
+			config.Password = getUserInput("Insira a senha do banco de dados:")
+			config.Database = getUserInput("Insira o nome do banco de dados:")
+			tableName := getUserInput("Insira o nome da tabela:")
+			filePath := getUserInput("Insira o caminho do arquivo CSV:")
 
-	fmt.Println("Insira a porta do banco de dados:")
-	port, _ := reader.ReadString('\n')
+			db, err := pkg.InitDB(config)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			defer db.Close()
 
-	fmt.Println("Insira o usuário do banco de dados:")
-	user, _ := reader.ReadString('\n')
+			err = pkg.CreateTable(db, tableName)
+			if err != nil {
+				log.Println(err)
+				return
+			}
 
-	fmt.Println("Insira a senha do banco de dados:")
-	password, _ := reader.ReadString('\n')
+			err = pkg.InsertDataFromCSV(db, tableName, filePath)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+		})
+	}()
+}
 
-	fmt.Println("Insira o nome do banco de dados:")
-	database, _ := reader.ReadString('\n')
-
-	fmt.Println("Insira o nome da tabela:")
-	tableName, _ := reader.ReadString('\n')
-
-	fmt.Println("Insira o caminho do arquivo CSV:")
-	filePath, _ := reader.ReadString('\n')
-
-	cfg := pkg.DBConfig{
-		Host:     strings.TrimSpace(host),
-		Port:     strings.TrimSpace(port),
-		User:     strings.TrimSpace(user),
-		Password: strings.TrimSpace(password),
-		Database: strings.TrimSpace(database),
-	}
-
-	db, err := pkg.InitDB(cfg)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer db.Close()
-
-	err = pkg.CreateTable(db, strings.TrimSpace(tableName))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	err = pkg.InsertDataFromCSV(db, strings.TrimSpace(tableName), strings.TrimSpace(filePath))
-	if err != nil {
-		log.Fatal(err)
-	}
+func getUserInput(prompt string) string {
+	resultChan := make(chan string)
+	cocoa.T_Alert("AppName", prompt, "", "Ok", func(btn cocoa.NSButton) {
+		resultChan <- btn.Title()
+	})
+	return <-resultChan
 }
