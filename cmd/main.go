@@ -1,12 +1,15 @@
 package main
 
 import (
+	"log"
+	"sync"
+
 	"github.com/nicollasm/golang-postgre-importer-csv/pkg"
 	"github.com/progrium/macdriver"
 	"github.com/progrium/macdriver/cocoa"
-	"github.com/progrium/macdriver/objc"
-	"log"
 )
+
+const maxInsertRetries = 3
 
 func main() {
 	go func() {
@@ -34,11 +37,15 @@ func main() {
 				return
 			}
 
-			err = pkg.InsertDataFromCSV(db, tableName, filePath)
-			if err != nil {
-				log.Println(err)
-				return
+			dataChan := make(chan []string)
+			go pkg.ReadCSVIntoChannel(filePath, dataChan)
+
+			var wg sync.WaitGroup
+			for record := range dataChan {
+				wg.Add(1)
+				go pkg.InsertData(db, tableName, record, &wg, maxInsertRetries)
 			}
+			wg.Wait()
 		})
 	}()
 }
@@ -46,7 +53,7 @@ func main() {
 func getUserInput(prompt string) string {
 	resultChan := make(chan string)
 	cocoa.T_Alert("AppName", prompt, "", "Ok", func(btn cocoa.NSButton) {
-		resultChan <- btn.Title()
+		resultChan <- btn.Title().String()
 	})
 	return <-resultChan
 }
