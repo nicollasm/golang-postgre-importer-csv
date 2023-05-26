@@ -7,12 +7,12 @@ import (
 	"io"
 	"log"
 	"os"
-	"time"
 
 	_ "github.com/go-sql-driver/mysql"
 )
 
 const (
+	batchSize       = 1000
 	tableNameSchema = `CREATE TABLE IF NOT EXISTS %s (
 		TELEFONE varchar(255),
 		DATA_ATIVACAO varchar(255),
@@ -61,24 +61,15 @@ const (
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
-const batchSize = 5000
-
-func CreateTable(db *sql.DB, tableName string) error {
-	stmt := fmt.Sprintf(tableNameSchema, tableName)
-	_, err := db.Exec(stmt)
+func ReadAndWriteToDB(db *sql.DB, fileName string, tableName string) {
+	err := createTable(db, tableName)
 	if err != nil {
-		log.Println(err)
-		return err
+		log.Println(err) // Alterado de log.Fatal(err)
 	}
-	fmt.Println("Tabela criada com sucesso.")
-	return nil
-}
 
-func ReadAndWriteToDB(db *sql.DB, tableName, csvName string) {
-	f, err := os.Open(csvName)
+	f, err := os.Open(fileName)
 	if err != nil {
-		log.Println(err)
-		return
+		log.Println(err) // Alterado de log.Fatal(err)
 	}
 	defer f.Close()
 
@@ -86,57 +77,81 @@ func ReadAndWriteToDB(db *sql.DB, tableName, csvName string) {
 	r.Comma = ';'
 	r.LazyQuotes = true
 
-	var data [][]string
-	count := 0
+	tx, err := db.Begin()
+	if err != nil {
+		log.Println(err) // Alterado de log.Fatal(err)
+	}
+
+	stmt, err := tx.Prepare(fmt.Sprintf(insertSchema, tableName))
+	if err != nil {
+		log.Println(err) // Alterado de log.Fatal(err)
+	}
+
+	linesBatch := make([][]string, 0, batchSize)
+	lineCount := 0
+
 	for {
 		record, err := r.Read()
 		if err == io.EOF {
 			break
 		}
 		if err != nil {
-			log.Println(err)
-			return
+			log.Println(err) // Alterado de log.Fatal(err)
+			continue
 		}
-		data = append(data, record)
-		count++
-		if count >= batchSize {
-			InsertData(db, tableName, data)
-			data = nil
-			count = 0
+
+		// Verifique se a linha tem a quantidade correta de campos
+		if len(record) != 21 {
+			log.Printf("A linha %d tem um número incorreto de campos e será ignorada\n", lineCount+1)
+			continue
 		}
+
+		linesBatch = append(linesBatch, record)
+
+		// Se já temos bastante linhas, inserimos no banco de dados
+		if len(linesBatch) == batchSize {
+			insertBatch(linesBatch, stmt)
+			linesBatch = linesBatch[:0] // Limpe o lote para o próximo
+		}
+
+		lineCount++
 	}
-	if count > 0 {
-		InsertData(db, tableName, data)
+
+	// Insira quaisquer linhas restantes que não foram inseridas
+	if len(linesBatch) > 0 {
+		insertBatch(linesBatch, stmt)
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		log.Println(err) // Alterado de log.Fatal(err)
 	}
 }
 
-func InsertData(db *sql.DB, tableName string, records [][]string) error {
-	sqlStatement := fmt.Sprintf(insertSchema, tableName)
-
-	tx, err := db.Begin()
-	if err != nil {
-		log.Fatal(err)
-	}
-	stmt, err := tx.Prepare(sqlStatement)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer stmt.Close()
-	for _, record := range records {
-		if len(record) != 21 {
-			log.Printf("Número incorreto de campos: %d. Esperado: 21. Pulando a linha", len(record))
-			continue
-		}
-		_, err = stmt.Exec(record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7], record[8], record[9], record[10], record[11], record[12], record[13], record[14], record[15], record[16], record[17], record[18], record[19], record[20])
+// Função para inserir um lote de linhas
+func insertBatch(linesBatch [][]string, stmt *sql.Stmt) {
+	for _, line := range linesBatch {
+		_, err := stmt.Exec(stringSliceToInterfaceSlice(line)...)
 		if err != nil {
-			log.Println(err)
-			time.Sleep(time.Second * 2)
-			continue
+			log.Printf("Erro ao inserir a linha no banco de dados: %v\n", err)
 		}
 	}
-	err = tx.Commit()
+}
+
+func stringSliceToInterfaceSlice(stringSlice []string) []interface{} {
+	interfaceSlice := make([]interface{}, len(stringSlice))
+	for i, d := range stringSlice {
+		interfaceSlice[i] = d
+	}
+	return interfaceSlice
+}
+
+func createTable(db *sql.DB, tableName string) error {
+	stmt := fmt.Sprintf(tableNameSchema, tableName)
+	_, err := db.Exec(stmt)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		return err
 	}
 	return nil
 }
