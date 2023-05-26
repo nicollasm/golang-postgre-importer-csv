@@ -8,7 +8,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// Database configuration
 type DBConfig struct {
 	Host     string
 	Port     string
@@ -17,7 +16,6 @@ type DBConfig struct {
 	Database string
 }
 
-// Function to initiate connection with database
 func InitDB(cfg DBConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 	db, err := sql.Open("mysql", dsn)

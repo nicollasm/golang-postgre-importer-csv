@@ -10,7 +10,6 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-// Cria a tabela se não existir
 func CreateTable(db *sql.DB, tableName string) error {
 	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
 		TELEFONE varchar(255),
@@ -44,7 +43,6 @@ func CreateTable(db *sql.DB, tableName string) error {
 	return nil
 }
 
-// Função para inserir dados na base de dados
 func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGroup, retries int) error {
 	defer wg.Done()
 
@@ -73,25 +71,13 @@ func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGrou
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tableName)
 
 	for i := 0; i <= retries; i++ {
-		_, err := db.Exec(stmt, stringSliceToInterface(record)...)
+		_, err := db.Exec(stmt, record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7], record[8], record[9], record[10], record[11], record[12], record[13], record[14], record[15], record[16], record[17], record[18], record[19], record[20])
 		if err != nil {
-			if i == retries {
-				log.Printf("Falhou após %d tentativas: %v\n", i+1, err)
-				return err
-			}
-			time.Sleep(time.Second * time.Duration(i+1))
+			log.Println(err)
+			time.Sleep(time.Second * 2)
 			continue
 		}
 		break
 	}
 	return nil
-}
-
-// Converte uma fatia de strings em uma fatia de interfaces
-func stringSliceToInterface(s []string) []interface{} {
-	result := make([]interface{}, len(s))
-	for i, v := range s {
-		result[i] = v
-	}
-	return result
 }
