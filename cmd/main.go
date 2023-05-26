@@ -7,13 +7,7 @@ import (
 )
 
 func main() {
-	db, err := pkg.InitDB(pkg.DBConfig{
-		Host:     "localhost",
-		Port:     "3306",
-		User:     "root",
-		Password: "nickas12",
-		Database: "maindatabase",
-	})
+	db, err := pkg.InitDB("dbconfig.json")
 	if err != nil {
 		log.Fatalln(err)
 		return
@@ -26,5 +20,5 @@ func main() {
 		return
 	}
 
-	pkg.ReadAndWriteToDB(db, "example_table", "example.csv") // ignorando o cabeçalho do CSV
+	pkg.ReadAndWriteToDB(db, "example_table", "example.csv")
 }

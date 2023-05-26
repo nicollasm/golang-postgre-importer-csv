@@ -2,8 +2,11 @@ package pkg
 
 import (
 	"database/sql"
+	"encoding/csv"
 	"fmt"
+	"io"
 	"log"
+	"os"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -58,6 +61,8 @@ const (
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
 )
 
+const batchSize = 5000
+
 func CreateTable(db *sql.DB, tableName string) error {
 	stmt := fmt.Sprintf(tableNameSchema, tableName)
 	_, err := db.Exec(stmt)
@@ -69,14 +74,50 @@ func CreateTable(db *sql.DB, tableName string) error {
 	return nil
 }
 
+func ReadAndWriteToDB(db *sql.DB, tableName, csvName string) {
+	f, err := os.Open(csvName)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	defer f.Close()
+
+	r := csv.NewReader(f)
+	r.Comma = ';'
+	r.LazyQuotes = true
+
+	var data [][]string
+	count := 0
+	for {
+		record, err := r.Read()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		data = append(data, record)
+		count++
+		if count >= batchSize {
+			InsertData(db, tableName, data)
+			data = nil
+			count = 0
+		}
+	}
+	if count > 0 {
+		InsertData(db, tableName, data)
+	}
+}
+
 func InsertData(db *sql.DB, tableName string, records [][]string) error {
-	stmt := fmt.Sprintf(insertSchema, tableName)
+	sqlStatement := fmt.Sprintf(insertSchema, tableName)
 
 	tx, err := db.Begin()
 	if err != nil {
 		log.Fatal(err)
 	}
-	stmt, err := tx.Prepare(stmt)
+	stmt, err := tx.Prepare(sqlStatement)
 	if err != nil {
 		log.Fatal(err)
 	}
