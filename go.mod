@@ -2,7 +2,4 @@ module github.com/nicollasm/golang-postgre-importer-csv
 
 go 1.16
 
-require (
-	github.com/go-sql-driver/mysql v1.6.0
-	github.com/progrium/macdriver v0.1.0
-)
+require github.com/go-sql-driver/mysql v1.6.0

@@ -2,19 +2,39 @@ package pkg
 
 import (
 	"database/sql"
-	"encoding/csv"
 	"fmt"
-	"io"
 	"log"
-	"os"
 	"sync"
 	"time"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
+// Cria a tabela se não existir
 func CreateTable(db *sql.DB, tableName string) error {
 	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
-		//...
-	)`, tableName)
+		TELEFONE varchar(255),
+		DATA_ATIVACAO varchar(255),
+		DATA_RETIRADA varchar(255),
+		STATUS_PRODUTO varchar(255),
+		TECNOLOGIA varchar(255),
+		TECNOLOGIA_BANDA varchar(255),
+		DOCUMENTO varchar(255),
+		TIPO_DOCUMENTO varchar(255),
+		NOME_CLIENTE varchar(255),
+		TIPO_CLIENTE varchar(255),
+		TIPO_ENDERECO varchar(255),
+		ENDERECO varchar(255),
+		NUMERO_ENDERECO varchar(255),
+		COMPL_ENDERECO varchar(255),
+		CEP varchar(255),
+		CEL_CONTATO varchar(255),
+		FIXO_CONTATO varchar(255),
+		EMAIL varchar(255),
+		UF varchar(255),
+		REGIAO varchar(255),
+		BAIRRO varchar(255)
+	);`, tableName)
 	_, err := db.Exec(stmt)
 	if err != nil {
 		log.Println(err)
@@ -24,15 +44,36 @@ func CreateTable(db *sql.DB, tableName string) error {
 	return nil
 }
 
+// Função para inserir dados na base de dados
 func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGroup, retries int) error {
 	defer wg.Done()
 
 	stmt := fmt.Sprintf(`INSERT INTO %s (
-		//...
-	) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tableName)
+			TELEFONE,
+			DATA_ATIVACAO,
+			DATA_RETIRADA,
+			STATUS_PRODUTO,
+			TECNOLOGIA,
+			TECNOLOGIA_BANDA,
+			DOCUMENTO,
+			TIPO_DOCUMENTO,
+			NOME_CLIENTE,
+			TIPO_CLIENTE,
+			TIPO_ENDERECO,
+			ENDERECO,
+			NUMERO_ENDERECO,
+			COMPL_ENDERECO,
+			CEP,
+			CEL_CONTATO,
+			FIXO_CONTATO,
+			EMAIL,
+			UF,
+			REGIAO,
+			BAIRRO
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tableName)
 
 	for i := 0; i <= retries; i++ {
-		_, err := db.Exec(stmt, record...)
+		_, err := db.Exec(stmt, stringSliceToInterface(record)...)
 		if err != nil {
 			if i == retries {
 				log.Printf("Falhou após %d tentativas: %v\n", i+1, err)
@@ -46,30 +87,11 @@ func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGrou
 	return nil
 }
 
-func ReadCSVIntoChannel(filepath string, dataChan chan []string) error {
-	f, err := os.Open(filepath)
-	if err != nil {
-		log.Println(err)
-		return err
+// Converte uma fatia de strings em uma fatia de interfaces
+func stringSliceToInterface(s []string) []interface{} {
+	result := make([]interface{}, len(s))
+	for i, v := range s {
+		result[i] = v
 	}
-	defer f.Close()
-
-	csvReader := csv.NewReader(f)
-	for {
-		record, err := csvReader.Read()
-		if err == io.EOF {
-			close(dataChan)
-			break
-		}
-		if err != nil {
-			log.Println(err)
-			return err
-		}
-		if len(record) < 21 {
-			log.Println("Registro com menos de 21 campos, ignorando...")
-			continue
-		}
-		dataChan <- record
-	}
-	return nil
+	return result
 }
