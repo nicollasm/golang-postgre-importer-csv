@@ -3,8 +3,9 @@ package pkg
 import (
 	"database/sql"
 	"fmt"
-	_ "github.com/go-sql-driver/mysql"
 	"log"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 type DBConfig struct {
@@ -15,7 +16,6 @@ type DBConfig struct {
 	Database string
 }
 
-// Inicialização do banco de dados, retorna erro se falhar
 func InitDB(cfg DBConfig) (*sql.DB, error) {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s", cfg.User, cfg.Password, cfg.Host, cfg.Port, cfg.Database)
 	db, err := sql.Open("mysql", dsn)
