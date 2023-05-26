@@ -9,8 +9,8 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
-func CreateTable(db *sql.DB, tableName string) error {
-	stmt := fmt.Sprintf(`CREATE TABLE IF NOT EXISTS %s (
+const (
+	tableNameSchema = `CREATE TABLE IF NOT EXISTS %s (
 		TELEFONE varchar(255),
 		DATA_ATIVACAO varchar(255),
 		DATA_RETIRADA varchar(255),
@@ -32,18 +32,8 @@ func CreateTable(db *sql.DB, tableName string) error {
 		UF varchar(255),
 		REGIAO varchar(255),
 		BAIRRO varchar(255)
-	);`, tableName)
-	_, err := db.Exec(stmt)
-	if err != nil {
-		log.Println(err)
-		return err
-	}
-	fmt.Println("Tabela criada com sucesso.")
-	return nil
-}
-
-func InsertData(db *sql.DB, tableName string, records [][]string) error {
-	stmt := fmt.Sprintf(`INSERT INTO %s (
+	);`
+	insertSchema = `INSERT INTO %s (
 			TELEFONE,
 			DATA_ATIVACAO,
 			DATA_RETIRADA,
@@ -65,7 +55,22 @@ func InsertData(db *sql.DB, tableName string, records [][]string) error {
 			UF,
 			REGIAO,
 			BAIRRO
-		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tableName)
+		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+)
+
+func CreateTable(db *sql.DB, tableName string) error {
+	stmt := fmt.Sprintf(tableNameSchema, tableName)
+	_, err := db.Exec(stmt)
+	if err != nil {
+		log.Println(err)
+		return err
+	}
+	fmt.Println("Tabela criada com sucesso.")
+	return nil
+}
+
+func InsertData(db *sql.DB, tableName string, records [][]string) error {
+	stmt := fmt.Sprintf(insertSchema, tableName)
 
 	tx, err := db.Begin()
 	if err != nil {
