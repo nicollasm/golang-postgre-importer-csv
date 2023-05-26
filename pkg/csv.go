@@ -6,14 +6,15 @@ import (
 	"io"
 	"log"
 	"os"
-	"sync"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
-func ReadCSV(csvName string) ([][]string, error) {
+func ReadAndWriteToDB(db *sql.DB, tableName, csvName string) {
 	f, err := os.Open(csvName)
 	if err != nil {
 		log.Println(err)
-		return nil, err
+		return
 	}
 	defer f.Close()
 
@@ -29,18 +30,10 @@ func ReadCSV(csvName string) ([][]string, error) {
 		}
 		if err != nil {
 			log.Println(err)
-			return nil, err
+			return
 		}
 		data = append(data, record)
+		InsertData(db, tableName, data)
+		data = nil
 	}
-	return data, nil
-}
-
-func WriteToDB(db *sql.DB, tableName string, data [][]string) {
-	var wg sync.WaitGroup
-	for _, record := range data {
-		wg.Add(1)
-		go InsertData(db, tableName, record, &wg, 3)
-	}
-	wg.Wait()
 }

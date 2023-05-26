@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"sync"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -43,9 +42,7 @@ func CreateTable(db *sql.DB, tableName string) error {
 	return nil
 }
 
-func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGroup, retries int) error {
-	defer wg.Done()
-
+func InsertData(db *sql.DB, tableName string, records [][]string) error {
 	stmt := fmt.Sprintf(`INSERT INTO %s (
 			TELEFONE,
 			DATA_ATIVACAO,
@@ -70,14 +67,30 @@ func InsertData(db *sql.DB, tableName string, record []string, wg *sync.WaitGrou
 			BAIRRO
 		) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, tableName)
 
-	for i := 0; i <= retries; i++ {
-		_, err := db.Exec(stmt, record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7], record[8], record[9], record[10], record[11], record[12], record[13], record[14], record[15], record[16], record[17], record[18], record[19], record[20])
+	tx, err := db.Begin()
+	if err != nil {
+		log.Fatal(err)
+	}
+	stmt, err := tx.Prepare(stmt)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer stmt.Close()
+	for _, record := range records {
+		if len(record) != 21 {
+			log.Printf("Número incorreto de campos: %d. Esperado: 21. Pulando a linha", len(record))
+			continue
+		}
+		_, err = stmt.Exec(record[0], record[1], record[2], record[3], record[4], record[5], record[6], record[7], record[8], record[9], record[10], record[11], record[12], record[13], record[14], record[15], record[16], record[17], record[18], record[19], record[20])
 		if err != nil {
 			log.Println(err)
 			time.Sleep(time.Second * 2)
 			continue
 		}
-		break
+	}
+	err = tx.Commit()
+	if err != nil {
+		log.Fatal(err)
 	}
 	return nil
 }

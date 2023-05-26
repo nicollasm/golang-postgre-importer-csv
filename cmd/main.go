@@ -26,11 +26,5 @@ func main() {
 		return
 	}
 
-	data, err := pkg.ReadCSV("example.csv")
-	if err != nil {
-		log.Fatalln(err)
-		return
-	}
-
-	pkg.WriteToDB(db, "example_table", data[1:]) // ignorando o cabeçalho do CSV
+	pkg.ReadAndWriteToDB(db, "example_table", "example.csv") // ignorando o cabeçalho do CSV
 }
