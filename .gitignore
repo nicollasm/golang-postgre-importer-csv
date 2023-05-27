@@ -1,0 +1,31 @@
+# Arquivos executáveis
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Arquivos compilados
+*.o
+*.a
+*.out
+
+# Arquivos gerados pela ferramenta de construção "go build"
+bin/
+
+# Diretórios gerados pela ferramenta de construção "go test"
+*.test
+
+# Arquivos de cache
+.cache/
+*.log
+
+# Dependências geradas pelo gerenciador de pacotes "go mod"
+/go.sum
+/go.mod
+
+# Arquivos JSON
+*.json
+
+# Arquivo example.csv
+*.csv
